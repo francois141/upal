@@ -1,8 +1,8 @@
 <p align="center">
   <h1 align="center">UPAL: Unified and Efficient Point-Line Local Features - ECCV 2026</h1>
   <p align="center">
-    François Costa
-    · Raphael Kreft
+    François Costa *
+    · Raphael Kreft *
     · Eckhard Goedeke
     · Felix Möller
     · Hardik Shah
@@ -18,6 +18,7 @@
     <br>
     <em>Red dots are learned keypoints, green segments are line detections supported by the learned distance field, and colored links are mutual-nearest descriptor matches.</em>
   </p>
+  <p align="center">* denotes equal contribution </p>
 </p>
 
 ## Upal
@@ -113,7 +114,17 @@ Input tensors must be `B x 3 x H x W` or `B x 1 x H x W`, with values in `[0, 1]
 
 ## BibTeX
 
-TODO: Add citation
+```
+@misc{costa2026unifiedefficientpointlinelocal,
+      title={Unified and Efficient Point-Line Local Features}, 
+      author={François Costa and Raphael Kreft and Eckhard Goedeke and Felix Möller and Hardik Shah and Ramanathan Rajaraman and Shaohui Liu and Rémi Pautrat and Marc Pollefeys},
+      year={2026},
+      eprint={2608.19894},
+      archivePrefix={arXiv},
+      primaryClass={cs.CV},
+      url={https://arxiv.org/abs/2608.19894}, 
+}
+```
 
 ## Acknowledgments
 
