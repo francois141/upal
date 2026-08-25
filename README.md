@@ -12,7 +12,7 @@
     · Marc Pollefeys
   </p>
 
-  <h2 align="center"><a href="https://example.com">Paper</a></h2>
+  <h2 align="center"><a href="https://arxiv.org/pdf/2608.19894">Paper</a></h2>
   <p align="center">
     <img src="assets/boat_demo.png" alt="UPAL inference on the boat pair" width="80%">
     <br>
