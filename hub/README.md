@@ -14,15 +14,19 @@ tags:
 
 # UPAL: Unified and Efficient Point-Line Local Features (ECCV 2026)
 
+François Costa<sup>*</sup> · Raphael Kreft<sup>*</sup> · Eckhard Goedeke · Felix Möller · Hardik Shah ·
+Ramanathan Rajaraman · Shaohui Liu · Rémi Pautrat · Marc Pollefeys
+
+<small><sup>*</sup> denotes equal contribution</small>
+
 Joint **keypoint + line** local feature extractor. One forward pass predicts sub-pixel
 keypoints with confidence scores, 128-D L2-normalised descriptors, a dense keypoint/junction
-heatmap and a dense line distance field. Line segments are obtained by seeding a modified LSD
-detector with the learned keypoints and filtering its proposals with the distance field.
+heatmap and a dense line distance field. In the released `0.1.0` inference package, line
+segments are obtained by seeding a modified LSD detector with the learned keypoints and
+filtering its proposals with the distance field.
 
 - Paper: [arXiv 2608.19894](https://arxiv.org/abs/2608.19894)
 - Code: [github.com/francois141/upal](https://github.com/francois141/upal)
-- Authors: François Costa\*, Raphael Kreft\*, Eckhard Goedeke, Felix Möller, Hardik Shah,
-  Ramanathan Rajaraman, Shaohui Liu, Rémi Pautrat, Marc Pollefeys (\* equal contribution)
 
 ![UPAL on the boat pair](assets/boat_demo.png)
 
@@ -74,6 +78,23 @@ Without the `lines` extra, call `model.extract(image, lines=False)`; `lines` is 
 takes a `C x H x W` tensor in `[0, 1]` (RGB or grayscale); the number of keypoints is set by
 `UPAL.from_pretrained("rkreft/upal", max_num_keypoints=2048)`. Images are padded to a
 multiple of 32 internally and outputs are returned in input-image coordinates.
+
+## Paper and release implementation
+
+The shared network architecture and weights implement the encoder and prediction heads
+described in the paper. The line and matching post-processing in the `0.1.0` inference package
+differs in two documented ways:
+
+- The paper's Fast-LSD uses a stride-2 seed grid and retains the 20% of seed pixels with the
+  lowest predicted distance-field values. This package instead seeds `points-lsd` with the
+  learned keypoints and filters the resulting segments by their mean predicted distance-field
+  value.
+- The paper's visual-localisation experiment solves endpoint-based line assignment with
+  Sinkhorn. The packaged `match_lines_from_endpoints` helper uses an exact maximum-weight
+  one-to-one assignment.
+
+These differences are confined to post-processing; they do not alter the released network
+weights or its point, descriptor, heatmap, and distance-field predictions.
 
 ## Model details
 
