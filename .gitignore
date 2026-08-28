@@ -6,3 +6,4 @@ outputs/
 dist/
 build/
 *.egg-info/
+.idea/

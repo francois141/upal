@@ -1,20 +1,49 @@
 [build-system]
-requires = ["setuptools>=68"]
+requires = ["setuptools>=77"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "upal-local-features"
-version = "0.1.0"
-description = "Standalone inference for the UPAL joint point-line feature network"
+name = "upal"
+dynamic = ["version"]
+description = "UPAL: unified and efficient point-line local features (ECCV 2026) — inference package"
 readme = "README.md"
 requires-python = ">=3.10"
-license = {file = "LICENSE"}
+license = "Apache-2.0"
+license-files = ["LICENSE"]
+authors = [
+    { name = "François Costa" },
+    { name = "Raphael Kreft" },
+]
+keywords = ["keypoints", "line-segments", "local-features", "image-matching", "pytorch"]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Topic :: Scientific/Engineering :: Image Recognition",
+    "Intended Audience :: Science/Research",
+]
 dependencies = [
     "numpy>=1.24",
     "opencv-python>=4.8",
     "torch>=2.0",
     "torchvision>=0.15",
+    "huggingface_hub>=0.30",  # paper_url mixin kwarg
+    "safetensors>=0.4",
 ]
+
+[project.optional-dependencies]
+# Point-seeded line segment detector (C++ extension, prebuilt wheels on PyPI).
+lines = ["points-lsd>=0.1.0,<0.2"]
+test = ["pytest>=8"]
+
+[project.urls]
+Repository = "https://github.com/francois141/upal"
+Paper = "https://arxiv.org/abs/2608.19894"
+"Hugging Face" = "https://huggingface.co/rkreft/upal"
+
+[tool.setuptools.dynamic]
+version = { attr = "upal.__version__" }
 
 [tool.setuptools.packages.find]
 include = ["upal*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
