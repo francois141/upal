@@ -148,6 +148,8 @@ jobs:
           name: distributions
           path: dist
       - uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          skip-existing: true
 
   publish_hub:
     name: Publish model to Hugging Face Hub
@@ -169,4 +171,4 @@ jobs:
       - name: Upload the pre-verified model folder
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
-        run: python scripts/push_to_hub.py --output hub-model --push --upload-only --private --repo-id rkreft/upal
+        run: python scripts/push_to_hub.py --output hub-model --push --upload-only --repo-id rkreft/upal

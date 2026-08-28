@@ -60,13 +60,14 @@ History of the step:
   endpoint descriptors. `.github/workflows/package.yml` runs them on Linux (Python 3.10 and
   3.14), macOS and Windows, builds/checks the wheel and sdist, supports an explicit TestPyPI
   dispatch, publishes to PyPI only for matching `v*` tags, and uploads the Hub model only after
-  the tagged PyPI publication succeeds. No publish workflow has been run.
+  the tagged PyPI publication succeeds. The TestPyPI publication and clean end-to-end install
+  have passed; production PyPI has not been published.
 - Hub namespace resolved to the authenticated personal account, `rkreft/upal`; the GitHub
   discussion requested a dedicated model repository but did not agree on the `ETH-CVG`
-  namespace. Configure the `testpypi`, `pypi`, and `huggingface` GitHub
-  environments, add the PyPI trusted-publisher records and an `HF_TOKEN` with write access,
-  then create the release tag when publication is intended. Ask HF to link the model to the
-  paper page after upload.
+  namespace. The TestPyPI and PyPI trusted publishers are configured. Configure the
+  `huggingface` GitHub environment with an `HF_TOKEN` that has write access, then create the
+  release tag when publication is intended. Ask HF to link the model to the paper page after
+  upload.
 
 
 
@@ -365,8 +366,11 @@ uvx twine upload dist/*                    # PyPI API token or trusted publisher
 
 ```bash
 hf auth login                              # once
-python scripts/push_to_hub.py --push --repo-id rkreft/upal    # converts, verifies, uploads
+python scripts/push_to_hub.py --push --private --repo-id rkreft/upal  # while the repo is private
 ```
+
+The production tag workflow omits `--private` and verifies that `rkreft/upal` is public before
+uploading. Make the Hub repository public before pushing the release tag.
 
 Then on the Hub: check the model page renders the card and the `from_pretrained` snippet,
 link the model to the paper page (https://huggingface.co/papers/2608.19894 → "add model"),

@@ -4,7 +4,8 @@
 Default run: writes ``model.safetensors`` + ``config.json`` + model card + demo image to
 ``--output`` and verifies that ``UPAL.from_pretrained(output)`` reproduces ``load_model``
 on the demo image. Add ``--push`` to upload the folder to ``--repo-id`` (needs
-``hf auth login`` or ``HF_TOKEN``).
+``hf auth login`` or ``HF_TOKEN``). Uploads require the existing repository to
+match the requested visibility: public by default, or private with ``--private``.
 """
 
 from __future__ import annotations
@@ -15,6 +16,8 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
+    from huggingface_hub import HfApi
+
     from upal import UPAL
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -62,6 +65,20 @@ def validate_prepared_output(output: Path) -> Path:
     return output
 
 
+def verify_repo_visibility(api: "HfApi", repo_id: str, *, private: bool) -> None:
+    """Refuse to upload when an existing Hub repository has unexpected visibility."""
+    info = api.repo_info(repo_id, repo_type="model")
+    actual_private = bool(info.private)
+    if actual_private != private:
+        actual = "private" if actual_private else "public"
+        expected = "private" if private else "public"
+        flag = " with --private" if private else " without --private"
+        raise RuntimeError(
+            f"Hub repository {repo_id} is {actual}, but this upload requires it to be "
+            f"{expected}{flag}; change the repository visibility before uploading"
+        )
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--weights", type=Path, default=ROOT / "weights/upal.tar")
@@ -73,7 +90,11 @@ def main() -> None:
         action="store_true",
         help="upload an existing prepared --output folder without regenerating it",
     )
-    parser.add_argument("--private", action="store_true", help="create the Hub repo as private")
+    parser.add_argument(
+        "--private",
+        action="store_true",
+        help="create or require a private Hub repo (uploads require public visibility by default)",
+    )
     parser.add_argument("--commit-message", default="Add UPAL inference weights")
     args = parser.parse_args()
 
@@ -99,6 +120,7 @@ def main() -> None:
 
         api = HfApi()
         api.create_repo(args.repo_id, repo_type="model", private=args.private, exist_ok=True)
+        verify_repo_visibility(api, args.repo_id, private=args.private)
         url = api.upload_folder(
             folder_path=args.output,
             repo_id=args.repo_id,
