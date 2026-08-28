@@ -129,8 +129,12 @@ the Hub folder from `weights/upal.tar` and verify it reproduces the checkpoint:
 
 ```bash
 python scripts/push_to_hub.py            # writes outputs/hub/upal and checks the round trip
-python scripts/push_to_hub.py --push     # additionally uploads it (needs `hf auth login`)
+python scripts/push_to_hub.py --push --private  # upload while the Hub repository is private
 ```
+
+Uploads verify the repository visibility before writing. The production release workflow
+expects `rkreft/upal` to be public, so make the Hub repository public before pushing the
+release tag.
 
 ## BibTeX
 
