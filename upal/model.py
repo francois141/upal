@@ -2,12 +2,14 @@
 
 from __future__ import annotations
 
+import warnings
 from pathlib import Path
 from typing import Callable
 
 import torch
 import torch.nn.functional as F
 import torchvision
+from huggingface_hub import PyTorchModelHubMixin
 from torch import nn
 
 
@@ -344,8 +346,22 @@ class KeypointDetector(nn.Module):
         return keypoints, keypoint_scores, dispersities
 
 
-class UPAL(nn.Module):
-    """Joint keypoint, descriptor, and line-distance-field inference network."""
+class UPAL(
+    nn.Module,
+    PyTorchModelHubMixin,
+    repo_url="https://github.com/francois141/upal",
+    paper_url="https://arxiv.org/abs/2608.19894",
+    library_name="upal",
+    license="apache-2.0",
+    pipeline_tag="keypoint-detection",
+    tags=["line-detection", "image-matching", "local-features"],
+):
+    """Joint keypoint, descriptor, and line-distance-field inference network.
+
+    The Hugging Face mixin adds ``UPAL.from_pretrained("<namespace>/upal")`` (downloads
+    ``model.safetensors`` + ``config.json``) and ``push_to_hub``; the constructor
+    arguments below are the serialised configuration.
+    """
 
     def __init__(
         self,
@@ -375,6 +391,18 @@ class UPAL(nn.Module):
         )
         self.keypoint_detector = KeypointDetector(nms_radius, max_num_keypoints)
 
+    @classmethod
+    def _load_as_safetensor(cls, model: "UPAL", model_file: str, map_location: str, strict: bool) -> "UPAL":
+        """Load ``model.safetensors`` with an exact key match.
+
+        The mixin defaults to ``strict=False``; a UPAL checkpoint must always be complete, so
+        the ``strict`` argument is ignored and loading is always strict.
+        """
+        from safetensors.torch import load_file
+
+        model.load_state_dict(load_file(model_file, device=map_location), strict=True)
+        return model.to(map_location).eval()
+
     def forward(self, image: torch.Tensor) -> dict[str, torch.Tensor]:
         """Extract features from an image tensor shaped ``B x C x H x W`` in [0, 1]."""
         if image.ndim != 4 or image.shape[1] not in (1, 3):
@@ -403,6 +431,68 @@ class UPAL(nn.Module):
             "line_distance_field": distance_field[:, 0],
         }
 
+    @torch.inference_mode()
+    def extract(
+        self,
+        image: torch.Tensor,
+        *,
+        lines: bool = True,
+        max_lines: int = 200,
+        min_line_length: float = 25.0,
+        max_line_distance: float = 2.0,
+    ) -> dict[str, torch.Tensor]:
+        """Run the network and, optionally, point-seeded line detection on one image.
+
+        ``image`` is ``C x H x W`` or ``1 x C x H x W`` in [0, 1]. Returns the ``forward``
+        outputs with the batch dimension removed plus ``lines`` (``L x 2 x 2`` endpoint
+        tensor, empty when ``lines=False``). Line detection needs the ``points-lsd``
+        package (``pip install "upal[lines]"``).
+        """
+        if image.ndim == 3:
+            image = image.unsqueeze(0)
+        if image.ndim != 4 or image.shape[0] != 1:
+            raise ValueError("extract() accepts one image shaped C x H x W or 1 x C x H x W")
+        if self.training:
+            warnings.warn("UPAL.extract() called on a model in training mode; call model.eval() first", stacklevel=2)
+        device = next(self.parameters()).device
+        image = image.to(device)
+        prediction = {key: value[0] for key, value in self(image).items()}
+        if lines:
+            from .postprocess import detect_lines
+
+            segments = detect_lines(
+                image,
+                prediction["line_distance_field"],
+                prediction["keypoints"],
+                max_lines=max_lines,
+                min_length=min_line_length,
+                max_mean_distance=max_line_distance,
+            )
+            prediction["lines"] = torch.from_numpy(segments).to(device)
+        else:
+            prediction["lines"] = torch.empty((0, 2, 2), device=device)
+        return prediction
+
+    @torch.inference_mode()
+    def describe_lines(self, image: torch.Tensor, lines: torch.Tensor) -> torch.Tensor:
+        """Describe line segments by their endpoints; returns ``L x 2 x D``.
+
+        ``image`` is ``C x H x W`` or ``1 x C x H x W``; ``lines`` is ``L x 2 x 2`` in pixel
+        (x, y) coordinates as returned by :meth:`extract`. Pair the result with
+        :func:`upal.postprocess.match_lines_from_endpoints`.
+        """
+        if image.ndim == 3:
+            image = image.unsqueeze(0)
+        if lines.ndim != 3 or lines.shape[1:] != (2, 2):
+            raise ValueError("lines must have shape L x 2 x 2")
+        device = next(self.parameters()).device
+        if len(lines) == 0:
+            return torch.empty((0, 2, MODEL_CONFIG["dim"]), device=device)
+        endpoints = lines.reshape(1, -1, 2).to(device=device, dtype=torch.float32)
+        descriptors = self.describe_keypoints(image.to(device), endpoints)[0]
+        return descriptors.reshape(len(lines), 2, -1)
+
+    @torch.inference_mode()
     def describe_keypoints(self, image: torch.Tensor, keypoints: torch.Tensor) -> torch.Tensor:
         """Extract descriptors at pixel-space coordinates shaped ``B x N x 2``.
 
