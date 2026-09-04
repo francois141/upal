@@ -30,7 +30,7 @@ Standalone PyTorch inference for **UPAL**, an ECCV 2026–accepted joint point-l
 - a dense keypoint/junction heatmap;
 - a dense line distance field.
 
-The inference network uses an ALIKED-style multi-scale encoder, deformable convolutions in its deeper stages, a sparse deformable descriptor head, a point/junction scoring head, and a line-distance-field decoder. The demo uses the bundled `points_lsd` detector, seeded from UPAL's learned keypoints, and filters its proposals with the learned distance field.
+The inference network uses an ALIKED-style multi-scale encoder, deformable convolutions in its deeper stages, a sparse deformable descriptor head, a point/junction scoring head, and a line-distance-field decoder. The demo uses the `points-lsd` detector, seeded from UPAL's learned keypoints, and filters its proposals with the learned distance field.
 
 ## Installation
 
@@ -41,11 +41,16 @@ python3 -m venv .venv
 source .venv/bin/activate
 python3 -m pip install --upgrade pip
 python3 -m pip install -e .
-git submodule update --init --recursive
-DEBUG=0 python3 -m pip install ./third_party/points_lsd
 ```
 
-For a CUDA installation, install the matching PyTorch build from [pytorch.org](https://pytorch.org/get-started/locally/) before running the last command.
+This pulls [`points-lsd`](https://pypi.org/project/points-lsd/) from PyPI, the point-seeded LSD detector used for line detection; wheels are published for Python 3.10-3.14 on Linux, macOS, and Windows. To build it from source instead - on musl-based distributions, for example - use the pinned submodule:
+
+```bash
+git submodule update --init --recursive
+python3 -m pip install ./third_party/points_lsd
+```
+
+For a CUDA installation, install the matching PyTorch build from [pytorch.org](https://pytorch.org/get-started/locally/) before installing this package.
 
 ## Run the demos
 
