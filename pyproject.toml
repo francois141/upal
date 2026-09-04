@@ -12,6 +12,7 @@ license = {file = "LICENSE"}
 dependencies = [
     "numpy>=1.24",
     "opencv-python>=4.8",
+    "points-lsd>=0.1.0",
     "torch>=2.0",
     "torchvision>=0.15",
 ]

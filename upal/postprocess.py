@@ -32,16 +32,15 @@ def detect_lines(
     """Detect point-seeded LSD segments and retain line-field-supported proposals.
 
     Gradients, keypoint seeds, and learned-field filtering run in Torch on the
-    input device. The detector is the ``pytlsd`` extension built from the
-    bundled ``points_lsd`` submodule; its NumPy C++ API is the sole CPU stage.
+    input device. The detector is the ``points_lsd`` extension module from the
+    ``points-lsd`` package; its NumPy C++ API is the sole CPU stage.
     """
     try:
-        import pytlsd
+        import points_lsd
     except ImportError as error:
         raise ImportError(
-            "points_lsd is required for line detection; run "
-            "`git submodule update --init --recursive` followed by "
-            "`DEBUG=0 python3 -m pip install ./third_party/points_lsd`."
+            "points-lsd is required for line detection; run "
+            "`python3 -m pip install points-lsd`."
         ) from error
 
     if image.ndim == 4:
@@ -64,7 +63,7 @@ def detect_lines(
     if len(seeds) == 0:
         return np.empty((0, 2, 2), dtype=np.float32)
 
-    segments = pytlsd.lsd_from_points(
+    segments = points_lsd.lsd_from_points(
         np.ascontiguousarray(gray.detach().cpu().numpy(), dtype=np.float64),
         np.ascontiguousarray(seeds.detach().cpu().numpy(), dtype=np.int32),
         1.0,
