@@ -58,7 +58,7 @@ jobs:
           python-version: ${{ matrix.python-version }}
           cache: pip
       - name: Install UPAL with tests and line detection
-        run: python -m pip install ".[lines,test]"
+        run: python -m pip install ".[test]"
       - name: Run tests
         run: python -m pytest -v
 
@@ -79,7 +79,7 @@ jobs:
           python -m twine check dist/*
       - name: Verify the built wheel
         run: |
-          python -m pip install ".[lines,test]"
+          python -m pip install ".[test]"
           python -m pip uninstall -y upal
           python -m pip install --no-deps dist/*.whl
           cd "$RUNNER_TEMP"

@@ -36,6 +36,8 @@ pip install upal            # network + point-seeded line detector
 for line extraction and is installed automatically. Wheels exist for Linux, macOS and Windows
 (CPython 3.10-3.14). On platforms without a compatible wheel, such as musl-based distributions,
 install the pinned submodule from source as shown below.
+The separately distributed detector includes an AGPL-3.0-or-later LSD core; see its PyPI
+page for the complete license declaration.
 
 To develop against this repository instead:
 

@@ -23,7 +23,7 @@ classifiers = [
 dependencies = [
     "numpy>=1.24",
     "opencv-python>=4.8",
-    "points-lsd>=0.1.0",
+    "points-lsd>=0.1.0,<0.2",
     "torch>=2.0",
     "torchvision>=0.15",
     "huggingface_hub>=0.30",  # paper_url mixin kwarg
@@ -31,8 +31,8 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-# Point-seeded line segment detector (C++ extension, prebuilt wheels on PyPI).
-lines = ["points-lsd>=0.1.0,<0.2"]
+# Backward-compatible alias; line detection is included in the default installation.
+lines = []
 test = ["pytest>=8"]
 
 [project.urls]

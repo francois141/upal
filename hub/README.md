@@ -32,8 +32,7 @@ coloured links: mutual-nearest descriptor matches.*
 ## Installation
 
 ```bash
-pip install "upal[lines]"   # network + point-seeded line detector (prebuilt wheels)
-pip install upal            # points only, no compiled dependency
+pip install upal   # network + point-seeded line detector
 ```
 
 ## Usage
@@ -56,7 +55,7 @@ feats0["keypoint_scores"]      # N
 feats0["keypoint_dispersity"]  # N, spread of the score peak (lower = sharper)
 feats0["keypoint_heatmap"]     # H x W
 feats0["line_distance_field"]  # H x W, distance to the nearest line in pixels
-feats0["lines"]                # L x 2 x 2 endpoints (needs the `lines` extra)
+feats0["lines"]                # L x 2 x 2 endpoints
 
 # Point matching: mutual nearest neighbours on descriptors.
 point_matches = mutual_nearest_neighbors(feats0["descriptors"], feats1["descriptors"])  # M x 2 indices
@@ -67,7 +66,7 @@ desc1 = model.describe_lines(read("img1.png"), feats1["lines"])  # L1 x 2 x 128
 line_matches, scores = match_lines_from_endpoints(desc0, desc1)   # K x 2 indices, K scores (NumPy)
 ```
 
-Without the `lines` extra, call `model.extract(image, lines=False)`; `lines` is then empty
+To skip line post-processing, call `model.extract(image, lines=False)`; `lines` is then empty
 (`0 x 2 x 2`) and everything else is unchanged.
 
 `extract(image, lines=True, max_lines=200, min_line_length=25.0, max_line_distance=2.0)`

@@ -14,7 +14,7 @@ smoke tests, and 12 LSD scenarios on UPAL outputs bit-identical to a source buil
 History of the step:
 
 - Branch `pypi-wheels`: module renamed `pytlsd` → `points_lsd`, metadata in `pyproject.toml`
-  (SPDX `MIT`, AGPL text of the LSD core shipped under `LICENSES/`), pybind11 `v3.1.0`,
+  (SPDX `AGPL-3.0-or-later AND MIT AND BSD-3-Clause` with all license texts), pybind11 `v3.1.0`,
   OpenCV dropped from the module, OpenMP opt-in, input validation in `lsd_from_points`
   (missing gradients / out-of-image seeds / bad shapes / `grad_nfa` now raise instead of
   crashing), all array inputs forced C-contiguous, numpy-only smoke test, full suite renamed
@@ -24,18 +24,21 @@ History of the step:
 - Verified: output bit-identical to the pre-rename build (seeded and full-image LSD, and
   UPAL's demo line detections on the boat pair); sdist round-trip; Linux aarch64 wheel
   built and tested in Docker.
-- First CI run: Linux x86_64/aarch64 and macOS arm64/x86_64 wheels green, full test suite
-  green on Ubuntu/macOS. **Windows failed** with heap corruption (`0xC0000374`): the
+- First CI run: Linux x86_64/aarch64 and macOS arm64/x86_64 wheels were green, while
+  **Windows failed** with heap corruption (`0xC0000374`): the
   point-seeded LSD functions `free()` list buffers that are only allocated by `ll_angle`,
   which that path never calls — undefined behaviour that gcc/clang tolerated and MSVC did
-  not. Fixed in `src/lsd.cpp` (pointers initialised to `nullptr`); awaiting the CI rerun.
+  not. Fixed in `src/lsd.cpp` (pointers initialised to `nullptr`); the rerun passed on all
+  supported platforms and the fix is included in `points-lsd` 0.1.0.
 - All of the above completed; remaining nicety: required reviewers on the `pypi` GitHub
   environment (needs repo admin).
 
 **Steps 2–3 (`upal` package, Hub mixin): implemented locally; PyPI and Hub uploads pending.**
 
-- `pyproject.toml`: dist renamed to `upal` (0.1.0), Apache-2.0 SPDX, `huggingface_hub` +
-  `safetensors` dependencies, `[lines]` extra → `points-lsd>=0.1.0`, project URLs.
+- `pyproject.toml`: dist renamed to `upal` (0.1.0), Apache-2.0 SPDX, `huggingface_hub`,
+  `safetensors`, and `points-lsd>=0.1.0,<0.2` dependencies, plus project URLs. The legacy
+  `[lines]` extra remains as an empty compatibility alias because line detection is installed
+  by default.
 - `upal/model.py`: `UPAL` now mixes in `PyTorchModelHubMixin` (`repo_url`, `paper_url`,
   `library_name="upal"`, `license`, `pipeline_tag="keypoint-detection"`, tags) — nothing
   else changed in the network. New convenience API: `UPAL.extract(image, lines=True, ...)`
@@ -50,12 +53,13 @@ History of the step:
   the card). `hub/README.md` is the model card (YAML: `license`, `library_name: upal`,
   `pipeline_tag`, tags incl. `arxiv:2608.19894`). `from_pretrained` loads strictly
   (overridden; the mixin default is non-strict). Requires `huggingface_hub>=0.30`.
-- README rewritten: `pip install "upal[lines]"`, quick start with `from_pretrained` /
+- README rewritten: `pip install upal`, quick start with `from_pretrained` /
   `extract` / matching, Hub section.
 - Verified: sdist + wheel build; wheel installed in a clean venv → `from_pretrained` on the
   converted folder, `extract` and the demos run; after the `points-lsd` release,
-  `pip install -e ".[lines]"` resolves from PyPI and the demos reproduce (1024/88, 100, 88/78/50).
-- Release safety added: four focused tests cover the public exports/version, point-only
+  `pip install -e .` resolves from PyPI and the demos reproduce (1024/88, 100, 88/78/50).
+- Release safety added: focused tests cover the public exports/version, network extraction
+  with line post-processing disabled,
   `extract`, an exact local Hub round trip, and checkpoint-to-line end-to-end extraction plus
   endpoint descriptors. `.github/workflows/package.yml` runs them on Linux (Python 3.10 and
   3.14), macOS and Windows, builds/checks the wheel and sdist, supports an explicit TestPyPI
@@ -100,7 +104,7 @@ needs no model code inside `transformers`. Reasoning:
 **Target user experience.**
 
 ```bash
-pip install "upal[lines]"          # points-only: pip install upal
+pip install upal
 ```
 ```python
 from upal import UPAL
@@ -116,7 +120,7 @@ post-processing; the Hub repo supplies the trained weights. Neither works alone.
 | Piece                                           | What it provides                                                     |
 |-------------------------------------------------|----------------------------------------------------------------------|
 | `upal` (pip)                                    | network code, `extract()`, point/line matching, line post-processing |
-| `points-lsd` (pip, via `upal[lines]`)           | the C++ line detector binding                                        |
+| `points-lsd` (standard `upal` dependency)       | the C++ line detector binding                                        |
 | Hub repo `<namespace>/upal`                     | `model.safetensors`, `config.json`, model card, paper link           |
 | `PyTorchModelHubMixin` (from `huggingface_hub`) | the `from_pretrained` / `push_to_hub` glue between the two           |
 
@@ -130,7 +134,7 @@ optional later step here.
 | # | Deliverable                                                         | Owner                          | Effort   |
 |---|---------------------------------------------------------------------|--------------------------------|----------|
 | 1 | `points-lsd` wheels on PyPI (Linux/macOS/Windows, py3.10–3.14)      | UPAL authors                   | 1–2 days |
-| 2 | `upal` on PyPI with `[lines]` extra and `extract()` convenience API | UPAL authors                   | 1 day    |
+| 2 | `upal` on PyPI with line detection and `extract()` convenience API | UPAL authors                   | 1 day    |
 | 3 | `PyTorchModelHubMixin` on `UPAL`, weights pushed as safetensors     | UPAL authors                   | 0.5 day  |
 | 4 | Hub model repo + model card, linked to the paper page               | UPAL authors + HF              | 0.5 day  |
 | 5 | Demo Space (ZeroGPU) showing points + lines on an image pair        | UPAL authors                   | 1–2 days |
@@ -149,15 +153,15 @@ optional later step here.
 
 ## 2. Detailed steps
 
-### Step 0 — Decisions to make first
+### Step 0 — Recorded decisions
 
 | Decision | Recommendation |
 |----------|----------------|
 | Hub namespace | `rkreft/upal` (personal namespace; the issue did not agree on `ETH-CVG`) |
 | One repo per checkpoint | Yes (HF recommendation). Currently a single checkpoint: `weights/upal.tar` → `<namespace>/upal` |
 | PyPI name of the LSD binding | **`points-lsd`** with import name `points_lsd`. `pytlsd` already exists on PyPI (Iago Suárez's upstream), so the fork must not reuse that name; two distributions providing the same `pytlsd` module would clash. Renaming the module touches the import, call, docstring and error message in `upal/postprocess.py`. |
-| PyPI name of the model package | `upal` (currently `upal-local-features` in `pyproject.toml`) |
-| Licenses | UPAL: Apache-2.0 (repo `LICENSE`). `points_lsd`: the binding is MIT (inherited from pytlsd), **but `src/lsd.cpp` is AGPL-3.0-or-later** and is statically linked into the wheel — decide how to label the PyPI package (and whether that matters for downstream users) before publishing. |
+| PyPI name of the model package | **`upal`** |
+| Licenses | UPAL: Apache-2.0 (repo `LICENSE`). `points-lsd`: `AGPL-3.0-or-later AND MIT AND BSD-3-Clause`, matching the components shipped in its wheels and sdist. |
 
 ### Step 1 — Build and publish `points_lsd` wheels
 
@@ -171,7 +175,8 @@ This is the step that unlocks "full point + line" everywhere, including HF Space
    carry no runtime OpenMP dependency.
 2. **Modernise the packaging** in `third_party/points_lsd`:
    - All metadata moves to `pyproject.toml` (`name = "points-lsd"`, `version`, SPDX
-     `license = "MIT"`, `requires-python = ">=3.10"`); `setup.py` keeps only the CMake glue
+     `license = "AGPL-3.0-or-later AND MIT AND BSD-3-Clause"`, `requires-python = ">=3.10"`);
+     `setup.py` keeps only the CMake glue
      and builds the `points_lsd` extension.
    - `pyproject.toml` `[tool.cibuildwheel]`: `build = "cp310-* cp311-* cp312-* cp313-* cp314-*"`,
      `skip = "*-musllinux_*"`,
@@ -188,8 +193,8 @@ This is the step that unlocks "full point + line" everywhere, including HF Space
 4. **Sanity check** locally: `pip install points-lsd` in a fresh venv, run
    `demo_inference.py` and compare line counts against the source build.
 5. **Update UPAL** (`upal/postprocess.py`): `import points_lsd` and the error message in
-   `detect_lines`, pointing to `pip install points-lsd` (switch to `pip install "upal[lines]"`
-   once Step 2 adds that extra).
+   `detect_lines`, explaining that the dependency is installed with UPAL and can also be
+   installed directly with `pip install points-lsd`.
 6. **API hardening done alongside the rename:** `lsd_from_points` now raises `ValueError`
    when `gradnorm`/`gradangle` are omitted (the C++ dereferenced them unconditionally and
    segfaulted) or when a seed lies outside the image; malformed seed arrays raise
@@ -202,11 +207,11 @@ This is the step that unlocks "full point + line" everywhere, including HF Space
    and NFA. `upal/postprocess.py` sorts by this column, which is therefore a no-op; exposing
    the NFA is a separate, additive decision.
 
-### Step 2 — Make `upal` pip-installable with a `[lines]` extra
+### Step 2 — Make `upal` pip-installable with line detection by default
 
-1. `pyproject.toml`: `name = "upal"`, add `huggingface_hub>=0.25` to dependencies, add
-   `[project.optional-dependencies] lines = ["points-lsd>=<version>"]`, add URLs
-   (repo, paper, Hub model).
+1. `pyproject.toml`: `name = "upal"`, add `huggingface_hub>=0.30` and
+   `points-lsd>=0.1.0,<0.2` to dependencies, retain an empty `[lines]` compatibility alias,
+   and add URLs (repo, paper, Hub model).
 2. Add a high-level API so users need no knowledge of the internals, e.g. in
    `upal/model.py` (or a thin `upal/api.py`):
    ```python
@@ -215,10 +220,8 @@ This is the step that unlocks "full point + line" everywhere, including HF Space
    which runs `forward`, then `detect_lines` when `lines=True` (raising a clear
    `ImportError` with the install hint if `points_lsd` is missing), and returns
    `keypoints`, `keypoint_scores`, `descriptors`, `lines`, plus the dense maps.
-3. Optionally expose `match_points(desc0, desc1)` and `match_lines(model, img0, lines0,
-   img1, lines1)` wrappers over `mutual_nearest_neighbors` and
-   `match_lines_from_endpoints` (the latter currently requires the user to call
-   `describe_keypoints` on endpoints themselves, as in `demo_match_lines.py`).
+3. Point matching is exposed through `mutual_nearest_neighbors`. Line endpoints are
+   described with `UPAL.describe_lines`, then matched with `match_lines_from_endpoints`.
 4. Publish to PyPI (tag-triggered workflow in this repo).
 
 ### Step 3 — Add `PyTorchModelHubMixin` and push the weights
@@ -226,7 +229,7 @@ This is the step that unlocks "full point + line" everywhere, including HF Space
 The mixin lives in `huggingface_hub` (already added as a dependency in Step 2). It only
 adds `from_pretrained` / `push_to_hub`; the architecture code stays in the `upal` package.
 Strictly, this step works without Step 2 (`pip install git+https://github.com/francois141/upal`
-is enough to make `UPAL` importable); PyPI publishing is for convenience and the `[lines]` extra.
+is enough to make `UPAL` importable); PyPI publishing provides the supported installation path.
 
 1. In `upal/model.py`:
    ```python
@@ -248,10 +251,12 @@ is enough to make `UPAL` importable); PyPI publishing is for convenience and the
 2. Conversion script `scripts/push_to_hub.py`:
    ```python
    model = load_model("weights/upal.tar")          # strips "extractor." prefix, filters to inference subset
-   model.push_to_hub("<namespace>/upal", commit_message="Initial UPAL release")
+   model.save_pretrained("outputs/hub/upal")
    ```
-   This uploads a **clean `model.safetensors`** + `config.json`. Do not upload
-   `upal.tar` as the primary artifact — it is a training checkpoint that only loads
+   The script copies the curated model card and demo asset, verifies the local round trip,
+   and uses `HfApi.upload_folder()` when `--push` is supplied. This preserves the curated
+   card while uploading a **clean `model.safetensors`** + `config.json`. Do not upload
+   `upal.tar` as the primary artifact because it is a training checkpoint that only loads
    through the filtering logic in `load_model`.
 3. Verify the round trip: `UPAL.from_pretrained("<namespace>/upal")` and
    `load_model("weights/upal.tar")` must give identical outputs on `assets/boat1.png`
@@ -273,13 +278,13 @@ library_name: upal
 ```
 Body: one-paragraph description (points + lines, ALIKED-style encoder, SDDH descriptors,
 line distance field), the install/usage snippet from the summary, output shapes (from the
-GitHub README "Python API" section), the optional-lines explanation, the boat demo image,
+GitHub README "Python API" section), the `lines=False` opt-out, the boat demo image,
 BibTeX, and acknowledgements (ALIKED, glue-factory, pytlsd, teacher models).
 Then claim the paper on the paper page and ask HF to link the model repo.
 
 ### Step 5 — Update the GitHub README
 
-Replace the build-from-source instructions with `pip install "upal[lines]"`, keep the
+Replace the build-from-source instructions with `pip install upal`, keep the
 source build as a fallback, add the `from_pretrained` snippet, and link the Hub repo and
 the Space.
 
@@ -294,7 +299,7 @@ Two options; the first gets the most visibility, the second is faster to ship.
 - **B. Standalone Gradio Space** on ZeroGPU: upload an image pair (default: `boat1`/`boat2`),
   sliders for `max_keypoints`, `max_size`, `min_length`, `max_mean_distance`; outputs
   the three visualisations produced by the existing demo scripts. `requirements.txt`:
-  `upal[lines]`, `gradio`, `spaces`. Reuse `upal/demo_utils.py` for drawing.
+  `upal`, `gradio`, `spaces`. Reuse `upal/demo_utils.py` for drawing.
 
 ### Step 7 — Optional: `transformers` integration of the point branch
 
@@ -321,56 +326,27 @@ Known obstacles:
 
 ## 3. Release runbook (in order)
 
-**A. `points-lsd`** — DONE (v0.1.0 on PyPI). Kept for the next release:
-
-```bash
-cd third_party/points_lsd
-git add src/lsd.cpp
-git commit -m "fix: initialise unused LSD list buffers on the point-seeded path (MSVC heap corruption)"
-git push                                   # PR #2 CI reruns; Windows legs should go green
-gh pr ready 2                              # undraft, then merge on GitHub
-```
-
-Then, once on `main`: create PyPI + TestPyPI accounts (2FA), add a *pending trusted
-publisher* on each (project `points-lsd`, owner `francois141`, repo `points_lsd`, workflow
-`wheels.yml`, environment `testpypi` / `pypi`); optionally have François add required
-reviewers to the `pypi` environment. Dry run: *Actions → Wheels → Run workflow* with
-`publish_testpypi = true`, then `pip install -i https://test.pypi.org/simple/ points-lsd`
-in a clean venv. Release:
-
-```bash
-git checkout main && git pull
-git tag v0.1.0 && git push origin v0.1.0    # publish_pypi job uploads to PyPI
-```
+**A. `points-lsd`** — DONE. Version 0.1.0 is on PyPI, and UPAL pins the compatible
+`>=0.1.0,<0.2` range. A future detector release must first bump its package version, merge
+and verify its wheel workflow, and then use a matching new tag. Do not recreate `v0.1.0`.
 
 **B. `upal`** (this repo)
 
-```bash
-git add README.md pyproject.toml upal/ scripts/ hub/ HF_INTEGRATION_PLAN.md third_party/points_lsd
-git commit -m "feat: pip package with lines extra, Hugging Face Hub mixin, extract() API"
-git push
-```
-
-(The `third_party/points_lsd` entry records the submodule commit; commit it only after the
-submodule fix above is committed so the pointer is not dangling.)
-
-PyPI (needs `points-lsd` live first, otherwise `pip install "upal[lines]"` cannot resolve):
-either add a `wheels.yml`-style trusted-publishing workflow here or upload manually:
-
-```bash
-uvx --from build pyproject-build -o dist .
-uvx twine upload dist/*                    # PyPI API token or trusted publisher
-```
+1. Merge the release PR only after its Package checks pass.
+2. Confirm the `pypi` trusted-publishing environment and the `huggingface` environment
+   secret `HF_TOKEN` are configured in GitHub.
+3. Make `rkreft/upal` public. Production upload intentionally fails while it is private.
+4. Fetch `main`, verify the intended release commit is `origin/main`, then create and push
+   tag `v0.1.0` on that exact commit. The Package workflow verifies the tag and commit,
+   publishes to PyPI, and uploads the already-verified Hub folder only after PyPI succeeds.
+5. Monitor every Package job and perform a clean `pip install upal` plus Hub inference smoke
+   test after publication. Do not upload the distribution manually.
 
 **C. Hugging Face Hub**
 
-```bash
-hf auth login                              # once
-python scripts/push_to_hub.py --push --private --repo-id rkreft/upal  # while the repo is private
-```
-
-The production tag workflow omits `--private` and verifies that `rkreft/upal` is public before
-uploading. Make the Hub repository public before pushing the release tag.
+Before release, a manual private upload may be tested with
+`python scripts/push_to_hub.py --push --private --repo-id rkreft/upal`. The production tag
+workflow omits `--private` and verifies that `rkreft/upal` is public before uploading.
 
 Then on the Hub: check the model page renders the card and the `from_pretrained` snippet,
 link the model to the paper page (https://huggingface.co/papers/2608.19894 → "add model"),
@@ -378,7 +354,7 @@ claim the paper, and reply on issue #1 with the links.
 
 ## 4. Checklist
 
-- [ ] Step 0: namespace, package names agreed
+- [x] Step 0: namespace and package names agreed
 - [x] Step 1: `points-lsd` 0.1.0 on PyPI (2026-08-28)
 - [~] Step 2: `upal` package implemented; PyPI upload to do
 - [~] Step 3: mixin added, round-trip verified; Hub push to do

@@ -445,8 +445,8 @@ class UPAL(
 
         ``image`` is ``C x H x W`` or ``1 x C x H x W`` in [0, 1]. Returns the ``forward``
         outputs with the batch dimension removed plus ``lines`` (``L x 2 x 2`` endpoint
-        tensor, empty when ``lines=False``). Line detection needs the ``points-lsd``
-        package (``pip install "upal[lines]"``).
+        tensor, empty when ``lines=False``). The ``points-lsd`` line detector is installed
+        as a standard dependency of UPAL.
         """
         if image.ndim == 3:
             image = image.unsqueeze(0)

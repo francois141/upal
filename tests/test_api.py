@@ -48,7 +48,7 @@ def test_public_api_and_version() -> None:
     }.issubset(upal.__all__)
 
 
-def test_extract_without_optional_line_postprocessing(model: UPAL, image: torch.Tensor) -> None:
+def test_extract_without_line_postprocessing(model: UPAL, image: torch.Tensor) -> None:
     prediction = model.extract(image, lines=False)
 
     assert set(prediction) == EXPECTED_OUTPUTS
