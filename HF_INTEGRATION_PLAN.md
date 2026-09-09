@@ -36,9 +36,8 @@ History of the step:
 **Steps 2–3 (`upal` package, Hub mixin): implemented locally; PyPI and Hub uploads pending.**
 
 - `pyproject.toml`: dist renamed to `upal` (0.1.0), Apache-2.0 SPDX, `huggingface_hub`,
-  `safetensors`, and `points-lsd>=0.1.0,<0.2` dependencies, plus project URLs. The legacy
-  `[lines]` extra remains as an empty compatibility alias because line detection is installed
-  by default.
+  `safetensors`, and `points-lsd>=0.1.0,<0.2` dependencies, plus project URLs. Line
+  detection is installed by default; there is no separate line-detection extra.
 - `upal/model.py`: `UPAL` now mixes in `PyTorchModelHubMixin` (`repo_url`, `paper_url`,
   `library_name="upal"`, `license`, `pipeline_tag="keypoint-detection"`, tags) — nothing
   else changed in the network. New convenience API: `UPAL.extract(image, lines=True, ...)`
@@ -210,8 +209,8 @@ This is the step that unlocks "full point + line" everywhere, including HF Space
 ### Step 2 — Make `upal` pip-installable with line detection by default
 
 1. `pyproject.toml`: `name = "upal"`, add `huggingface_hub>=0.30` and
-   `points-lsd>=0.1.0,<0.2` to dependencies, retain an empty `[lines]` compatibility alias,
-   and add URLs (repo, paper, Hub model).
+   `points-lsd>=0.1.0,<0.2` to the standard dependencies, and add URLs (repo, paper,
+   Hub model).
 2. Add a high-level API so users need no knowledge of the internals, e.g. in
    `upal/model.py` (or a thin `upal/api.py`):
    ```python

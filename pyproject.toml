@@ -31,8 +31,6 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-# Backward-compatible alias; line detection is included in the default installation.
-lines = []
 test = ["pytest>=8"]
 
 [project.urls]
