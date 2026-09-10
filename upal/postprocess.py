@@ -32,15 +32,17 @@ def detect_lines(
     """Detect point-seeded LSD segments and retain line-field-supported proposals.
 
     Gradients, keypoint seeds, and learned-field filtering run in Torch on the
-    input device. The detector is the ``points_lsd`` extension module from the
-    ``points-lsd`` package; its NumPy C++ API is the sole CPU stage.
+    input device. The detector is the ``points_lsd`` extension (PyPI package
+    ``points-lsd``, source in the bundled submodule); its NumPy C++ API is the
+    sole CPU stage.
     """
     try:
         import points_lsd
     except ImportError as error:
         raise ImportError(
-            "points-lsd is required for line detection; run "
-            "`python3 -m pip install points-lsd`."
+            "points-lsd is required for line detection and is normally installed with UPAL; "
+            "install it directly with `pip install points-lsd` or from source with "
+            "`git submodule update --init --recursive && pip install ./third_party/points_lsd`."
         ) from error
 
     if image.ndim == 4:
